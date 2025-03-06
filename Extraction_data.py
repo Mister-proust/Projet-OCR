@@ -8,7 +8,7 @@ url_serv = os.getenv("URL_SERVEUR")
 sas_serv = os.getenv("SAS_SERVEUR")
 
 
-for i in range(2018, 2026):
+for i in range(2018, 2025):
     url = url_serv + str(i) + "?restype=container&comp=list&" + sas_serv
 
     response = requests.get(url)
@@ -21,7 +21,7 @@ for i in range(2018, 2026):
         name = Blob.find("Name").text
 
         print("Facture :", name)
-        new_url = url_serv + str(i) + "/"+ str(name) + sas_serv
+        new_url = url_serv + str(i) + "/"+ str(name) + "?" + sas_serv
         facture_path = f"data/factures/{i}/{name}"
         download_png = requests.get(new_url)
         with open(facture_path, 'wb') as f:

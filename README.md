@@ -38,6 +38,7 @@ DB_PORT="server_port"
 DB_USER="username"
 DB_PASS="password"
 DB_NAME="database_name"
+DB_SCHEMA = "you_re_schema_name"
 
 URL_SERVEUR = "URL du serveur"
 SAS_SERVEUR = "SAS de l'entreprise"

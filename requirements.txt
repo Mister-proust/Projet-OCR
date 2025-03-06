@@ -1,3 +1,10 @@
 lxml
 requests
 python-dotenv
+easyocr
+imageio[pyav]
+opencv-python
+torch
+torchvision
+torchaudio
+matplotlib
