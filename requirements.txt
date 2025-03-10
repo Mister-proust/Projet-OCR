@@ -8,3 +8,6 @@ torch
 torchvision
 torchaudio
 matplotlib
+azure-ai-vision-imageanalysis
+python-doctr[tf]
+mplcursors
