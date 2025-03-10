@@ -11,7 +11,7 @@ reader = easyocr.Reader(['en'])
 
 
 # Read text from an image
-result = reader.readtext(image, width_ths=1, )
+result = reader.readtext(image, width_ths=2, )
 print(result)
 
 image2 = cv2.imread(image)
