@@ -12,3 +12,4 @@ azure-ai-vision-imageanalysis
 python-doctr[tf]
 mplcursors
 pytesseract
+pyzbar
