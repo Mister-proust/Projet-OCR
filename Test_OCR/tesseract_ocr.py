@@ -2,6 +2,7 @@ import cv2
 import pytesseract
 from pytesseract import Output
 import matplotlib.pyplot as plt
+import re
 
 input_path = "../data/factures/2018/FAC_2018_0002-114.png"
 output_path = "../data/FAC_2018_0036-284_boxes.png"
@@ -45,6 +46,18 @@ def thresholding(image):
 def draw_bounding_boxes(preprocessed_img, output_path):
     text = pytesseract.image_to_string(preprocessed_img, config='--psm 6')
     print(text)
+    primary_key = re.findall(r'FAC/\d{4}/\d+', text)
+    print(primary_key)
+    date_facture = re.findall(r'date (\d{4}-\d{2}-\d{2})', text)
+    print(date_facture)
+    nom_personne = re.findall(r'Bill to ([^\n]+)', text)
+    print(nom_personne)
+    email_personne = re.findall(r'Email ([^\n]+)', text)
+    print(email_personne)
+    rue_num_personne = re.findall(r'Address ([^\n]+)', text)
+    print(rue_num_personne)
+    ville_personne = [v.strip() for v in re.findall(r'Address [^\n]+\n([\w\s-]+), \w{2} \d{5}', text)]
+    print(ville_personne)
 
     data = pytesseract.image_to_data(preprocessed_img, output_type=Output.DICT)
     n_boxes = len(data["text"])
@@ -56,7 +69,7 @@ def draw_bounding_boxes(preprocessed_img, output_path):
             cv2.rectangle(preprocessed_img, (x, y), (x + w, y + h), (0, 255, 0), 2)
 
     cv2.imwrite(output_path, preprocessed_img)
-    return text
+    return text, primary_key
 
 if __name__ == "__main__":
     img = cv2.imread(input_path)
