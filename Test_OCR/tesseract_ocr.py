@@ -56,6 +56,7 @@ def draw_bounding_boxes(preprocessed_img, output_path):
             cv2.rectangle(preprocessed_img, (x, y), (x + w, y + h), (0, 255, 0), 2)
 
     cv2.imwrite(output_path, preprocessed_img)
+    return text
 
 if __name__ == "__main__":
     img = cv2.imread(input_path)
