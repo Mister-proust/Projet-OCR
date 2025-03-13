@@ -1,8 +1,9 @@
 import os
 from dotenv import load_dotenv
 from sqlalchemy import URL, create_engine
+from sqlalchemy.orm import sessionmaker
 
-
+load_dotenv()
 
 def build_dburl(path):
     """load_params"""
@@ -14,7 +15,7 @@ def build_dburl(path):
     DB_NAME = os.getenv("DB_NAME", "postgres")
 
     return  URL.create(
-        "postgresql",
+        "postgresql+psycopg2",
         username = DB_USER,
         password = DB_PASS,  
         host = DB_HOST,
@@ -27,4 +28,6 @@ def build_engine(path='../../config/.env'):
     url_object = build_dburl(path)
     print(url_object)
     engine = create_engine(url_object)
-    return engine
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    return engine, SessionLocal
+
