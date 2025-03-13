@@ -4,8 +4,8 @@ from pytesseract import Output
 import matplotlib.pyplot as plt
 import re
 
-input_path = "../data/factures/2018/FAC_2018_0002-114.png"
-output_path = "../data/FAC_2018_0036-284_boxes.png"
+input_path = "../data/factures/2024/FAC_2024_0378-191.png"
+output_path = "../data/FAC_2024_0378-284_boxes.png"
 
 
 def resize_image(image, scale=2):
@@ -13,21 +13,10 @@ def resize_image(image, scale=2):
     new_size = (width * scale, height * scale)
     return cv2.resize(image, new_size, interpolation=cv2.INTER_CUBIC)
 
-def mask_qr_code(image):
-    qr_detector = cv2.QRCodeDetector()
-    _, qr_bbox, _ = qr_detector.detectAndDecode(image)
-
-    if qr_bbox is not None:
-        qr_bbox = qr_bbox.astype(int)
-        x, y, w, h = cv2.boundingRect(qr_bbox)
-        cv2.rectangle(image, (x, y), (x + w, y + h), (255, 255, 255), -1)
-    
-    return image
-
 def mask_photo(image):
     height, width = image.shape[:2]
     
-    x_start = int(width * 0.75)  
+    x_start = int(width * 0.55)  
     y_start = 0               
     x_end = width              
     y_end = int(height * 0.15) 
@@ -46,8 +35,8 @@ def thresholding(image):
 def draw_bounding_boxes(preprocessed_img, output_path):
     text = pytesseract.image_to_string(preprocessed_img, config='--psm 6')
     print(text)
-    primary_key = re.findall(r'FAC/\d{4}/\d+', text)
-    print(primary_key)
+    nom_facture = re.findall(r'FAC/\d{4}/\d+', text)
+    print(nom_facture)
     date_facture = re.findall(r'date (\d{4}-\d{2}-\d{2})', text)
     print(date_facture)
     nom_personne = re.findall(r'Bill to ([^\n]+)', text)
@@ -58,6 +47,25 @@ def draw_bounding_boxes(preprocessed_img, output_path):
     print(rue_num_personne)
     ville_personne = [v.strip() for v in re.findall(r'Address [^\n]+\n([\w\s-]+), \w{2} \d{5}', text)]
     print(ville_personne)
+    code_postal_personne = re.findall(r', (\w{2} \d{5})', text)
+    print(code_postal_personne)
+
+    articles = re.findall(r'^(.*?)\s+\d+\s*x\s+[\d,.]+\s+Euro$', text, re.MULTILINE)
+    article_vars = {f"article_{i+1}": article for i, article in enumerate(articles)}
+    articles_list = list(article_vars.values())
+    print(articles_list) 
+
+    quantite = re.findall(r'(\d+)\s*x\s*[\d,.]+\s+Euro', text)
+    quantite = [int(q) for q in quantite]  
+    print("Quantités :", quantite)
+
+    prix = re.findall(r'\d+\s*x\s*([\d,.]+)\s+Euro', text)
+    prix = [float(p.replace(',', '.')) for p in prix] 
+    print("Prix :", prix)
+
+    total = re.findall(r'TOTAL\s+([\d,.]+)\s+Euro', text)
+    total = float(total[0].replace(',', '.')) if total else None
+    print("Montant total :", total)
 
     data = pytesseract.image_to_data(preprocessed_img, output_type=Output.DICT)
     n_boxes = len(data["text"])
@@ -69,13 +77,12 @@ def draw_bounding_boxes(preprocessed_img, output_path):
             cv2.rectangle(preprocessed_img, (x, y), (x + w, y + h), (0, 255, 0), 2)
 
     cv2.imwrite(output_path, preprocessed_img)
-    return text, primary_key
+    return text
 
 if __name__ == "__main__":
     img = cv2.imread(input_path)
     resized_img = resize_image(img, scale=2) 
-    masked_img = mask_qr_code(resized_img)  
-    masked_img = mask_photo(masked_img)      
+    masked_img = mask_photo(resized_img)      
     gray = grayscale(masked_img)            
     thresh = thresholding(gray)              
     draw_bounding_boxes(thresh, output_path) 

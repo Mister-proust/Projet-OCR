@@ -13,3 +13,4 @@ python-doctr[tf]
 mplcursors
 pytesseract
 pyzbar
+sqlalchemy

@@ -18,4 +18,6 @@ Base = declarative_base(metadata=metadata_obj)
 #######################################################################
 
 class Monitoring(Base):
-    __tablename__ = '
+    __tablename__ = 'Utilisateur'
+
+    id = Column(String, primary_key=True)
