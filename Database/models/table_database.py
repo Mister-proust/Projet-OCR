@@ -1,6 +1,6 @@
-from sqlalchemy import Column, MetaData, ForeignKey
+from sqlalchemy import Column, MetaData, ForeignKey, PrimaryKeyConstraint
 from sqlalchemy.dialects.postgresql import VARCHAR, INTEGER
-from sqlalchemy.orm import declarative_base
+from sqlalchemy.orm import declarative_base, relationship
 
 
 #######################################################################
@@ -30,6 +30,8 @@ class Utilisateur(Base):
     ville_personne = Column(VARCHAR(128))
     code_postal_personne = Column(VARCHAR(12))
 
+    #facture = relationship("Facture", back_populates="Utilisateur")
+
    
 
 class Facture(Base):
@@ -39,10 +41,17 @@ class Facture(Base):
      total_facture = Column(INTEGER)
      email_personne = Column(VARCHAR(120), ForeignKey("maximilien.Utilisateur.email_personne"), nullable=False)
 
+     #utilisateur = relationship("Utilisateur", back_populates="Facture")
+     #article = relationship("Article", back_populates="Facture")
+
 class Article(Base):
      __tablename__ = 'Article'
 
      nom_facture = Column(VARCHAR(24), ForeignKey("maximilien.Facture.nom_facture"), primary_key = True, nullable = False)
-     nom_article = Column(VARCHAR(256))
+     nom_article = Column(VARCHAR(256), primary_key = True)
      quantite = Column(INTEGER)
      prix = Column(INTEGER)
+
+     #facture = relationship("Facture", back_populates="Article")
+
+     __table_args__ = (PrimaryKeyConstraint("nom_facture", "nom_article"),)

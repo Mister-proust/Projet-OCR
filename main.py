@@ -1,49 +1,72 @@
 from Database.db_connection import build_engine, build_dburl
-from Database.models.table_database import Base, Utilisateur, Facture, Article
+from Database.models.table_database import Utilisateur, Facture, Article
+from faker import Faker
+from Database.db_connection import SQLClient
 
 path = build_dburl
+
+def generated_data(n=1):
+
+    datas = []
+    f=Faker()
+    for _ in range(n):
+        
+        email = f.email()
+        nom_facture = f.bothify(text = 'FAC/####/??')
+        datas.append( {
+            "utilisateur" : {
+                "email_personne" : email,
+                "nom_personne" : f.name(),
+                "gender" : f.bothify(text = '?') ,
+                "rue_num_personne" : f.street_address(),
+                "ville_personne" : f.city() ,
+                "code_postal_personne" : f.postalcode() ,
+            }, 
+            "facture" : {
+                "nom_facture" : nom_facture ,
+                "date_facture" : f.date(),
+                "total_facture" : f.pydecimal(left_digits=4, right_digits=2, positive=True, min_value=1, max_value=1000),
+                "email_personne" : email,
+
+            },
+            "article" : {
+                "nom_facture"  : nom_facture ,
+                "nom_article" : f.bothify(text = 'article ????????????????????????') ,
+                "quantite" : int(f.bothify(text = '#')) ,
+                "prix" : float(f.bothify(text = '##.##')) ,
+
+            }
+        })
+    return datas
 
 def create_tables():
     print("Création des tables...")
     engine, _ = build_engine()
-    Base.metadata.create_all(bind=engine)
+    #Base.metadata.create_all(bind=engine)
     print("Tables créées avec succès !")
 
-def add_users(path='../../config/.env'):
+def add_data(client, data ):
+
+    #Onglet utilisateur
+    utilisateur = Utilisateur(**data["utilisateur"])
+    client.insert(utilisateur)
+
+    #Onglet facture
+    facture = Facture(**data["facture"])
+    client.insert(facture)
+
+    #Onglet article
+    article = Article(**data["article"])
+    client.insert(article)
+
+    print("Tables complétées avec succès !")
+
+
+def get_facture(client):
     engine, SessionLocal = build_engine()
-    db = SessionLocal()
-    try:
-        #Onglet utilisateur
-        utilisateur = Utilisateur(nom_personne="Alice", email_personne="test@test.com")
-        mail = Utilisateur(nom_personne = "Bob", email_personne="blalfsf@fg.fr")
-
-        db.add_all([utilisateur, mail ])
-        db.commit()
-
-        #Onglet facture
-        facture = Facture(nom_facture="Alice", email_personne=utilisateur.email_personne)
-        facture2 = Facture(nom_facture="LHUI", email_personne = mail.email_personne)
-
-        db.add_all([facture, facture2])
-        db.commit()
-
-        #Onglet article
-        article1 = Article(nom_facture=facture.nom_facture, nom_article="Chaussures", quantite=1, prix=50)
-        user2 = Article(nom_facture=facture2.nom_facture, nom_article="nom_article")
-
-        db.add_all([article1, user2])
-        db.commit()
-
-
-        print("Tables complétées avec succès !")
-    finally:
-        db.close()
-
-def get_users():
-    SessionLocal = build_engine()
     session = SessionLocal
     try:
-        users = session.query(Utilisateur).all()
+        users = session.query(Facture).all()
         for user in users:
             print(f"ID: {user.id}, Name: {user.name}, Age: {user.age}")
     finally:
@@ -51,8 +74,8 @@ def get_users():
 
 
 # Mettre à jour un utilisateur
-def update_user(user_id, new_name):
-    SessionLocal = build_engine()
+def update_facture(client, user_id, new_name):
+    engine, SessionLocal = build_engine()
     session = SessionLocal
     try:
         user = session.query(Utilisateur).filter(Utilisateur.id == user_id).first()
@@ -66,8 +89,8 @@ def update_user(user_id, new_name):
         session.close()
 
 # Supprimer un utilisateur
-def delete_user(user_id):
-    SessionLocal = build_engine()
+def delete_facture(client, user_id):
+    engine, SessionLocal = build_engine()
     session = SessionLocal
     try:
         user = session.query(Utilisateur).filter(Utilisateur.id == user_id).first()
@@ -82,28 +105,34 @@ def delete_user(user_id):
 
 # Menu principal
 if __name__ == "__main__":
+    client = SQLClient()
+    #client.drop_all()
     print("Options disponibles :")
     print("1 : Créer les tables")
-    print("2 : Ajouter des utilisateurs")
-    print("3 : Lire les utilisateurs")
+    print("2 : Ajouter des factures")
+    print("3 : Lire les factures")
     print("4 : Mettre à jour un utilisateur")
     print("5 : Supprimer un utilisateur")
+    datas =generated_data(10)
+    for data in datas : add_data(client, data)
+    """
 
     choice = input("Entrez le numéro de l'opération : ")
 
     if choice == "1":
         create_tables()
     elif choice == "2":
-        add_users()
+        add_factures()
     elif choice == "3":
-        get_users()
+        get_facture()
     elif choice == "4":
         user_id = int(input("ID de l'utilisateur à mettre à jour : "))
         new_name = input("Nouveau nom : ")
-        update_user(user_id, new_name)
+        update_facture(user_id, new_name)
     elif choice == "5":
         user_id = int(input("ID de l'utilisateur à supprimer : "))
-        delete_user(user_id)
+        delete_facture(user_id)
     else:
         print("Choix invalide.")
 
+"""

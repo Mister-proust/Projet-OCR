@@ -28,7 +28,7 @@ pip install -r requirements.txt
 
 4. Connexion à la base de données et fichier caché
 
-Les paramètres de connexion à la base de données ainsi que les données sensibles doivent être mises dans un fichier ```.env```.
+Les paramètres de connexion à la base de données ainsi que les données sensibles doivent être mises dans un fichier ```.env```. Dans `load_dotenv()` mettre override=True en paramètre sur windows. 
 
 ```
 # fichier .env

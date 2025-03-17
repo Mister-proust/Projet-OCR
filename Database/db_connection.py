@@ -1,14 +1,15 @@
 import os
 from dotenv import load_dotenv
-from sqlalchemy import URL, create_engine
+from sqlalchemy import URL, create_engine, text
 from sqlalchemy.orm import sessionmaker
-from Database.models.table_database import Utilisateur, Facture, Article
+from contextlib import contextmanager
+from Database.models.table_database import Base
+import sqlalchemy 
 
-load_dotenv()
 
 def build_dburl(path):
     """load_params"""
-    load_dotenv(dotenv_path=path)
+    load_dotenv(dotenv_path=path, override=True)
     DB_HOST = os.getenv("DB_HOST", None)
     DB_PORT = os.getenv("DB_PORT", 5432)
     DB_USER = os.getenv("DB_USER", None)
@@ -24,44 +25,51 @@ def build_dburl(path):
         database = DB_NAME,
     )
 
-def build_engine(path='../../config/.env'):
+def build_engine(path='../../.env', echo=True):
     """make_engine"""
     url_object = build_dburl(path)
     print(url_object)
-    engine = create_engine(url_object)
-    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-    return engine, SessionLocal
+    engine = create_engine(url=url_object)
+    
+    return engine
 
 
-def add_users(path='../../config/.env'):
-    url_object = build_dburl(path)
-    print(url_object)
-    engine = create_engine(url_object)
-    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-    db = SessionLocal()
-    try:
-        #Onglet utilisateur
-        utilisateur = Utilisateur(nom_personne="Alice", email_personne="test@test.com")
-        mail = Utilisateur(nom_personne = "Bob", email_personne="blalfsf@fg.fr")
+class SQLClient:
+    def __init__(self):
+        self.engine = build_engine()
+        self.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
+        Base.metadata.create_all(bind=self.engine, checkfirst=True)
 
-        db.add_all([utilisateur, mail ])
-        db.commit()
+    @contextmanager
+    def get_session(self):
+        session = self.SessionLocal()
+        try:
+            yield session
+        finally:
+            session.close()
+    
+    def drop_all(self):
+        """ Supprime toute les tables """
+        Base.metadata.drop_all(bind=self.engine)
 
-        #Onglet facture
-        facture = Facture(nom_facture="Alice", email_personne=utilisateur.email_personne)
-        facture2 = Facture(nom_facture="LHUI", email_personne = mail.email_personne)
+    def test_connection(self):
+        try:
+            with self.get_session() as session:
+                result = session.execute(text("SELECT version();"))
+                print("✅ Connexion réussie à PostgreSQL !")
+                for row in result:
+                    print(f"Version PostgreSQL : {row[0]}")
+        except Exception as e:
+            print(f"❌ Erreur de connexion : {e}")
+    
+    def insert(self, row):
+        with self.get_session() as session:
+            try :
+                session.add(row)
+                session.commit()
+            except sqlalchemy.exc.IntegrityError : 
+                print(f"❌ {row} already exists.")
 
-        db.add_all([facture, facture2])
-        db.commit()
-
-        #Onglet article
-        article1 = Article(nom_facture=facture.nom_facture, nom_article="Chaussures", quantite=1, prix=50)
-        user2 = Article(nom_facture=facture2.nom_facture, nom_article="nom_article")
-
-        db.add_all([article1, user2])
-        db.commit()
-
-
-        print("Tables complétées avec succès !")
-    finally:
-        db.close()
+if __name__ == "__main__" :
+    client = SQLClient()
+    client.test_connection()
