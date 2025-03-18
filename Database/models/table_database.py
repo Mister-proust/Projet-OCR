@@ -25,10 +25,11 @@ class Utilisateur(Base):
 
     email_personne = Column(VARCHAR(120), primary_key=True)
     nom_personne = Column(VARCHAR(128))
-    gender = Column(VARCHAR(1))
+    genre = Column(VARCHAR(1))
     rue_num_personne = Column(VARCHAR(128))
     ville_personne = Column(VARCHAR(128))
     code_postal_personne = Column(VARCHAR(12))
+    date_anniversaire = Column(VARCHAR(12))
 
     #facture = relationship("Facture", back_populates="Utilisateur")
 

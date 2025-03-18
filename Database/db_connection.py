@@ -25,7 +25,7 @@ def build_dburl(path):
         database = DB_NAME,
     )
 
-def build_engine(path='../../.env', echo=True):
+def build_engine(path='.env', echo=True):
     """make_engine"""
     url_object = build_dburl(path)
     print(url_object)
