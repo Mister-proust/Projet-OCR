@@ -1,5 +1,5 @@
 from sqlalchemy import Column, MetaData, ForeignKey, PrimaryKeyConstraint
-from sqlalchemy.dialects.postgresql import VARCHAR, INTEGER
+from sqlalchemy.dialects.postgresql import VARCHAR, INTEGER, FLOAT
 from sqlalchemy.orm import declarative_base, relationship
 
 
@@ -39,7 +39,7 @@ class Facture(Base):
      __tablename__ = 'Facture'
      nom_facture = Column(VARCHAR(24), primary_key = True, nullable = False)
      date_facture = Column(VARCHAR(12))
-     total_facture = Column(INTEGER)
+     total_facture = Column(FLOAT)
      email_personne = Column(VARCHAR(120), ForeignKey("maximilien.Utilisateur.email_personne"), nullable=False)
 
      #utilisateur = relationship("Utilisateur", back_populates="Facture")
@@ -51,7 +51,7 @@ class Article(Base):
      nom_facture = Column(VARCHAR(24), ForeignKey("maximilien.Facture.nom_facture"), primary_key = True, nullable = False)
      nom_article = Column(VARCHAR(256), primary_key = True)
      quantite = Column(INTEGER)
-     prix = Column(INTEGER)
+     prix = Column(FLOAT)
 
      #facture = relationship("Facture", back_populates="Article")
 

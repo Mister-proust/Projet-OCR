@@ -8,7 +8,7 @@ input_path = "../data/factures/2024/FAC_2024_0378-191.png"
 output_path = "../data/FAC_2024_0378-284_boxes.png"
 
 
-def resize_image(image, scale=2):
+def resize_image(image, scale=3):
     height, width = image.shape[:2]
     new_size = (width * scale, height * scale)
     return cv2.resize(image, new_size, interpolation=cv2.INTER_CUBIC)

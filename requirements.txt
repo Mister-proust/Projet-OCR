@@ -15,3 +15,7 @@ pytesseract
 pyzbar
 sqlalchemy
 psycopg2
+pandas
+seaborn
+matplotlib.pyplot
+missingno
