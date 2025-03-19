@@ -94,6 +94,7 @@ def draw_bounding_boxes(preprocessed_img, output_path):
         ],
     }
 
+    # Le code suivant permet d'encadrer en vert les zones repérées ainsi que d'enregistrer le fichier.
     """
     data = pytesseract.image_to_data(preprocessed_img, output_type=Output.DICT)
     n_boxes = len(data["text"])
@@ -112,14 +113,11 @@ import os
 import glob
 
 def get_invoice_files(base_path="data/factures"):
-    """
-    Récupère la liste de toutes les factures dans les dossiers de 2018 à 2025.
-    """
     invoice_files = []
-    for year in range(2018, 2026):  # De 2018 à 2025 inclus
-        year_path = os.path.join(base_path, str(year))  # Exemple: ../data/factures/2018
+    for year in range(2018, 2026):  
+        year_path = os.path.join(base_path, str(year))  
         files = glob.glob(os.path.join(year_path, "*.png")) + glob.glob(os.path.join(year_path, "*.jpg"))
-        invoice_files.extend(files)  # Ajoute les fichiers trouvés à la liste
+        invoice_files.extend(files)
     
     return invoice_files
 
@@ -128,9 +126,9 @@ invoice_files = get_invoice_files()
 for invoice_path in invoice_files:
     print(f"Traitement de : {invoice_path}")
 
-    img = cv2.imread(invoice_path)  # Charge l'image
+    img = cv2.imread(invoice_path)  
     if img is None:
-        print(f"⚠️ Impossible de lire l'image : {invoice_path}")
+        print(f"Impossible de lire l'image : {invoice_path}, Veuillez réassayer")
         continue
 
     resized_img = resize_image(img, scale=2) 

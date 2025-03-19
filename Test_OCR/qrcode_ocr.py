@@ -4,27 +4,24 @@ import re
 import os
 import glob
 
-# Fonction qui récupère les fichiers d'invoice
 def get_invoice_files(base_path="data/factures"):
     invoice_files = []
-    for year in range(2018, 2026):  # Exemple pour 2018
+    for year in range(2018, 2026):  
         year_path = os.path.join(base_path, str(year))
         files = glob.glob(os.path.join(year_path, "*.png")) + glob.glob(os.path.join(year_path, "*.jpg"))
         invoice_files.extend(files)
     
     return invoice_files
 
-# Fonction qui extrait les données du QR code
 def extract_qr_data(invoice_path):
     x = decode(Image.open(invoice_path))
 
     if not x:
-        print(f"⚠️ Aucun QR code trouvé dans l'image : {invoice_path}")
+        print(f"Aucun QR code trouvé: {invoice_path}, Veuillez réassayer")
         return None
 
     regex = x[0].data.decode('utf-8')
 
-    # Extraction des données via des expressions régulières
     nom_facture = re.findall(r'FAC/\d{4}/\d+', regex)
     date_facture = re.findall(r'DATE:(\d{4}-\d{2}-\d{2})', regex)
     genre = re.findall(r'CUST:(\w)', regex)
@@ -37,20 +34,17 @@ def extract_qr_data(invoice_path):
         "date_anniversaire": date_anniversaire[0] if date_anniversaire else None
     }
 
-# Fonction pour traiter toutes les factures
 def process_invoices():
-    invoice_files = get_invoice_files()  # Récupérer les fichiers
+    invoice_files = get_invoice_files()  
     for invoice_path in invoice_files:
-        print(f"📄 Traitement de : {invoice_path}")
+        print(f" Traitement du fichier suivant : {invoice_path}")
         
-        # Extraire les données du QR code
         qr_data = extract_qr_data(invoice_path)
 
         if qr_data:
-            print(f"QR Data : {qr_data}")
+            print(f"QR code trouvé ! {qr_data}")
         else:
             print("Aucun QR code trouvé pour cette facture.")
 
-# Appel de la fonction principale
 if __name__ == "__main__":
     process_invoices()
