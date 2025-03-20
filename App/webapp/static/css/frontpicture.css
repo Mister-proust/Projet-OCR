@@ -1,0 +1,8 @@
+body {
+    background-image: url("/static/images/image_fond.jpg");
+    background-size: cover; 
+    background-position: center;
+    background-repeat: no-repeat;
+    height: 100vh; 
+    margin: 0;
+}
