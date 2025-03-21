@@ -27,3 +27,19 @@ async def login(request: Request):
 @app.get("/afterlogin", response_class=HTMLResponse)
 async def afterlogin(request: Request):
     return templates.TemplateResponse("afterlogin.html", {"request": request, "nom_app": "PROCR"})
+
+@app.get("/importfichier", response_class=HTMLResponse)
+async def importfichier(request: Request):
+    return templates.TemplateResponse("importfichier.html", {"request": request, "nom_app": "PROCR"})
+
+@app.get("/bdd", response_class=HTMLResponse)
+async def bdd(request: Request):
+    return templates.TemplateResponse("bdd.html", {"request": request, "nom_app": "PROCR"})
+
+@app.get("/stats", response_class=HTMLResponse)
+async def stats(request: Request):
+    return templates.TemplateResponse("stats.html", {"request": request, "nom_app": "PROCR"})
+
+@app.get("/documentation", response_class=HTMLResponse)
+async def documentation(request: Request):
+    return templates.TemplateResponse("documentation.html", {"request": request, "nom_app": "PROCR"})
