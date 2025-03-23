@@ -43,3 +43,19 @@ async def stats(request: Request):
 @app.get("/documentation", response_class=HTMLResponse)
 async def documentation(request: Request):
     return templates.TemplateResponse("documentation.html", {"request": request, "nom_app": "PROCR"})
+
+@app.get("/qr_tesseract", response_class=HTMLResponse)
+async def qr_tesseract_page(request: Request):
+    return templates.TemplateResponse("qr_tesseract.html", {"request": request})
+
+@app.get("/tesseract", response_class=HTMLResponse)
+async def tesseract_page(request: Request):
+    return templates.TemplateResponse("tesseract.html", {"request": request})
+
+@app.get("/azure", response_class=HTMLResponse)
+async def azure_page(request: Request):
+    return templates.TemplateResponse("azure.html", {"request": request})
+
+@app.get("/qr_azure", response_class=HTMLResponse)
+async def azure_page(request: Request):
+    return templates.TemplateResponse("qr_azure.html", {"request": request})
