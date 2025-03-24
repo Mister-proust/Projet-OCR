@@ -65,6 +65,22 @@
             font-family: 'Poppins', Snell Rouhand, cursive;
         }
 
+
+        .logout-btn {
+            background-color: #d63384;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 10px;
+            max-width: 200px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease-in-out;
+        }
+
+        .logout-btn:hover {
+            background-color: #a12266;
+        }
         
     </style>
 </head>
@@ -72,8 +88,11 @@
 <body>
     <div class="container">
         <div class="rounded-box">
-            <p>PROCR, Le pro de l'OCR, c'est vous !</p>
+            <p>PROCR, Le pro de l'OCR, c'est vous !</p>        
         </div>
+        <form action="/logout" method="post" style="display: inline;">
+            <a href="/logout" class="nav-link logout-btn"><i class="bi bi-box-arrow-right"></i> Déconnexion</a>
+        </form>
     </div>
 
     <nav class="navbar navbar-expand-lg">

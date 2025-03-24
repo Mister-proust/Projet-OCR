@@ -18,4 +18,10 @@ psycopg2
 pandas
 seaborn
 missingno
-fastapi
+fastapi[standard]
+passlib
+ecdsa-0.19.1 
+pyasn1-0.4.8 
+pyjwt-2.10.1 
+python-jose-3.4.0 
+rsa-4.9
