@@ -13,18 +13,20 @@ import jwt
 from datetime import datetime, timedelta
 from typing import Optional
 from fastapi.security.utils import get_authorization_scheme_param
+import shutil
 
 load_dotenv()
 SECRET_KEY = os.getenv("SECRET_KEY", "une_cle_secrete_temporaire_a_changer")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
-
 app = FastAPI()
 
-app.mount("/static", StaticFiles(directory="./webapp/static"), name="static")
+app.mount("/static", StaticFiles(directory="./static"), name="static")
 
-templates = Jinja2Templates(directory="./webapp/templates")
+os.makedirs("static/uploads", exist_ok=True)
+
+templates = Jinja2Templates(directory="./templates")
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -134,6 +136,8 @@ async def afterlogin(request: Request, user: User = Depends(get_current_user)):
 async def importfichier(request: Request, user: User = Depends(get_current_user)):
     return templates.TemplateResponse("importfichier.html", {"request": request, "nom_app": "PROCR"})
 
+
+
 @app.get("/bdd", response_class=HTMLResponse)
 async def bdd(request: Request, user: User = Depends(get_current_user)):
     return templates.TemplateResponse("bdd.html", {"request": request, "nom_app": "PROCR"})
@@ -155,8 +159,25 @@ async def tesseract_page(request: Request, user: User = Depends(get_current_user
     return templates.TemplateResponse("tesseract.html", {"request": request})
 
 @app.get("/azure", response_class=HTMLResponse)
-async def azure_page(request: Request, user: User = Depends(get_current_user)):
-    return templates.TemplateResponse("azure.html", {"request": request})
+async def azure_page(
+    request: Request, 
+    filename: str = Query(None)  # Paramètre optionnel
+):
+    # Si pas de filename, essayer de trouver le dernier fichier uploadé
+    if not filename:
+        uploads_dir = "static/uploads"
+        files = os.listdir(uploads_dir)
+        if files:
+            # Prendre le dernier fichier uploadé
+            filename = files[-1]
+    
+    if not filename:
+        return HTMLResponse(content="Aucun fichier trouvé", status_code=404)
+    
+    return templates.TemplateResponse("azure.html", {
+        "request": request, 
+        "image_path": f"/static/uploads/{filename}"
+    })
 
 @app.get("/qr_azure", response_class=HTMLResponse)
 async def azure_page(request: Request, user: User = Depends(get_current_user)):
@@ -203,3 +224,24 @@ async def logout_get():
     response = RedirectResponse(url="/")
     response.delete_cookie("access_token")  # Supprime le token de connexion
     return response
+
+@app.post("/uploadfile")
+async def upload_file(
+    file: UploadFile = File(...), 
+    qr: bool = Form(False), 
+    tesseract: bool = Form(False), 
+    azure: bool = Form(False)
+):
+    # Vérifier si un fichier est uploadé
+    if not file.filename:
+        return {"error": "Pas de fichier sélectionné"}
+    
+    # Générer un chemin unique pour le fichier
+    file_path = f"static/uploads/{file.filename}"
+    
+    # Sauvegarder le fichier
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    
+    # Rediriger vers la page Azure avec le nom du fichier
+    return RedirectResponse(url=f"/azure?filename={file.filename}", status_code=303)

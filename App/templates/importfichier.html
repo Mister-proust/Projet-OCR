@@ -125,6 +125,9 @@
         <div class="rounded-box">
             <p>PROCR, Le pro de l'OCR, c'est vous !</p>
         </div>
+        <form action="/logout" method="post" style="display: inline;">
+            <a href="/logout" class="nav-link logout-btn"><i class="bi bi-box-arrow-right"></i> Déconnexion</a>
+        </form>
     </div>
 
     <nav class="navbar navbar-expand-lg">
@@ -151,3 +154,82 @@
             </div>
         </div>
     </nav>
+    <div class="container">
+        <div class="rounded-box2">
+        <form id="uploadForm">
+            <input type="file" id="fileInput" style="display: none;" onchange="showOptions()">
+            <button class="custom-button" onclick="event.preventDefault(); document.getElementById('fileInput').click();">
+                Importer votre fichier
+            </button>
+        </form>
+        </div>
+
+        <div id="options-container">
+            <h4>Que souhaitez-vous faire avec votre fichier ?</h4>
+
+            <div>
+                <input type="radio" name="ocrOption" id="tesseractOption">
+                <label for="tesseractOption">Je souhaite utiliser Tesseract, mais je vais devoir le paramétrer par la suite</label>
+            </div>
+            <div>
+                <input type="radio" name="ocrOption" id="azureOption">
+                <label for="azureOption">Je n'ai pas le temps et je prends Azure OCR qui ne nécessite pas de paramétrage (moins spécifique)</label>
+            </div>
+            <div>
+                <input type="checkbox" id="qrOption">
+                <label for="qrOption">Mon fichier comporte un QR code avec des informations que je souhaite conserver</label>
+            </div>
+            <button class="custom-button" onclick="submitChoices()">Valider</button>
+        </div>
+
+        <script>
+            function showOptions() {
+                        document.getElementById("options-container").style.display = "block";
+                    }
+                    function submitChoices() {
+                let fileInput = document.getElementById("fileInput");
+                let file = fileInput.files[0];
+
+                if (!file) {
+                    alert("Veuillez sélectionner un fichier.");
+                    return;
+                }
+
+                let qrSelected = document.getElementById("qrOption").checked;
+                let tesseractSelected = document.getElementById("tesseractOption").checked;
+                let azureSelected = document.getElementById("azureOption").checked;
+
+                if (tesseractSelected && azureSelected) {
+                    alert("Vous ne pouvez pas choisir Tesseract et Azure OCR en même temps.");
+                    return;
+                }
+
+                let formData = new FormData();
+                formData.append("file", file);
+                formData.append("qr", qrSelected);
+                formData.append("tesseract", tesseractSelected);
+                formData.append("azure", azureSelected);
+
+                fetch("/uploadfile", {
+                    method: "POST",
+                    body: formData
+                })
+                .then(response => {
+                    if (response.ok) {
+                        // Redirection vers la page /azure après l'upload
+                        setTimeout(() => {
+                            window.location.href = '/azure';  // Redirection vers la page Azure
+                        }, 500); // Attente d'1 seconde avant la redirection
+                    } else {
+                        alert("Erreur lors du téléchargement.");
+                    }
+                })
+                .catch(error => {
+                    console.error("Erreur :", error);
+                    alert("Erreur lors de l'envoi du fichier.");
+                });
+            }
+        </script>
+
+    </div>
+    </div>
