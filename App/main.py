@@ -14,6 +14,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 from fastapi.security.utils import get_authorization_scheme_param
 import shutil
+from services.azure_ocr import get_words
 
 load_dotenv()
 SECRET_KEY = os.getenv("SECRET_KEY", "une_cle_secrete_temporaire_a_changer")
@@ -232,16 +233,29 @@ async def upload_file(
     tesseract: bool = Form(False), 
     azure: bool = Form(False)
 ):
-    # Vérifier si un fichier est uploadé
     if not file.filename:
         return {"error": "Pas de fichier sélectionné"}
+
+    # Récupération de l'extension du fichier d'origine
+    _, file_extension = os.path.splitext(file.filename)
     
-    # Générer un chemin unique pour le fichier
-    file_path = f"static/uploads/{file.filename}"
-    
-    # Sauvegarder le fichier
+    # Définition d'un nom standard
+    standard_filename = f"image_telecharge{file_extension}"
+    file_path = f"static/uploads/{standard_filename}"
+
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
-    
-    # Rediriger vers la page Azure avec le nom du fichier
-    return RedirectResponse(url=f"/azure?filename={file.filename}", status_code=303)
+
+    return RedirectResponse(url=f"/azure?filename={standard_filename}", status_code=303)
+
+@app.post("/azure_ocr")
+async def azure_ocr(
+    request: Request, 
+    db: Session = Depends(get_db)
+):
+    result, image_enregistree = get_words()
+    image_url = image_enregistree.replace("./static/", "/static/")
+
+    texte_ocr = "\n".join([" ".join([word.text for word in line.words]) for block in result.read.blocks for line in block.lines])
+
+    return templates.TemplateResponse("azure.html", {"request": request, "message": texte_ocr, "image" : image_url})

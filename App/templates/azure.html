@@ -70,9 +70,19 @@
             border-radius: 45px;
             padding: 20px;
             margin: 10px auto;
-            max-width: 500px;
-            margin-top: 20px ;
-            font-size: 25px;
+            max-width: 300px;
+            margin-top: 10px ;
+            font-size: 22px;
+            font-family: 'Poppins', Snell Rouhand, cursive;
+        }
+        .rounded-box3 {
+            background-color: #f5e7e8; 
+            border-radius: 45px;
+            padding: 20px;
+            margin: 10px auto;
+            max-width: 1500px;
+            margin-top: 10px ;
+            font-size: 22px;
             font-family: 'Poppins', Snell Rouhand, cursive;
         }
         .custom-button {
@@ -92,7 +102,7 @@
         }
 
         #options-container {
-            display: none; /* Caché par défaut */
+            display: none; 
             margin-top: 20px;
             background-color: #f5e7e8;
             padding: 20px;
@@ -117,9 +127,9 @@
         }
 
         .uploaded-image {
-            width: 60%; /* Ajuste la largeur de l'image à 80% de la largeur de son conteneur */
-            height: auto; /* Garder l'aspect ratio de l'image */
-            max-width: 300px; /* Vous pouvez définir une largeur maximale si vous souhaitez que l'image ne dépasse pas une certaine taille */
+            width: 60%; 
+            height: auto;
+            max-width: 300px; 
         }
 
         
@@ -163,14 +173,31 @@
 <body>
     <div class="container">
         <div class="rounded-box2">
-        Votre image téléchargée
+        Voici l'image importée :
     </div>
         <img src="{{ image_path }}" alt="Image uploadée" class="uploaded-image">
         
         <div class="mt-4">
             <a href="/importfichier" class="btn btn-secondary">Retour</a>
-            <button class="btn btn-primary">Lancer OCR</button>
+            <form action="/azure_ocr" method="post" style="display:inline;">
+                <button type="submit" class="btn btn-primary">Lancer OCR</button>
+            </form>
         </div>
     </div>
+        <!-- Afficher le texte OCR si disponible -->
+        {% if message %}
+        <div class="rounded-box3">
+            <h2>Résultat OCR</h2>
+            <p>{{ message }}</p>
+        </div>
+    {% endif %}
+
+    <!-- Afficher l'image annotée si disponible -->
+    {% if image %}
+        <div class="mt-4">
+            <h3>Image annotée</h3>
+            <img src="{{ image }}" alt="Image avec annotations">
+        </div>
+    {% endif %}
 </body>
 </html>
