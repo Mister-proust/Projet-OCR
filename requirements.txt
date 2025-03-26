@@ -27,3 +27,4 @@ python-jose-3.4.0
 rsa-4.9
 pyjwt
 bcript
+numpy
