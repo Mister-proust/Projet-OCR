@@ -6,6 +6,8 @@ import re
 import os
 import glob
 
+UPLOAD_DIR = "./static/uploads/"
+
 def resize_image(image, scale=3):
     height, width = image.shape[:2]
     new_size = (width * scale, height * scale)
@@ -91,54 +93,35 @@ def draw_bounding_boxes(preprocessed_img):
             for i in range(len(articles))
         ],
     }
-
-    # Le code suivant permet d'encadrer en vert les zones repérées ainsi que d'enregistrer le fichier.
-    """
-    data = pytesseract.image_to_data(preprocessed_img, output_type=Output.DICT)
-    n_boxes = len(data["text"])
-
-    for i in range(n_boxes):
-        if data["text"][i].strip():  
-            x, y = data["left"][i], data["top"][i]
-            w, h = data["width"][i], data["height"][i]
-            cv2.rectangle(preprocessed_img, (x, y), (x + w, y + h), (0, 255, 0), 2)
-
-    cv2.imwrite(output_path, preprocessed_img)
-    """
     return data
 
 
 def get_invoice_files():
-    UPLOAD_DIR = "../static/uploads/"
     images = glob.glob(os.path.join(UPLOAD_DIR, "image_telecharge.*"))  
     if not images:
         return "Aucune image trouvée", None  
-    return invoice_files
+    return images
 
-invoice_files = get_invoice_files()
 
-for invoice_path in invoice_files:
-    print(f"Traitement de : {invoice_path}")
+def process_invoices(): 
+    invoice_files = get_invoice_files()
 
-    img = cv2.imread(invoice_path)  
-    if img is None:
-        print(f"Impossible de lire l'image : {invoice_path}, Veuillez réassayer")
-        continue
+    for invoice_path in invoice_files:
+        print(f"Traitement de : {invoice_path}")
 
-    resized_img = resize_image(img, scale=2) 
-    masked_img = mask_photo(resized_img)      
-    gray = grayscale(masked_img)            
-    thresh = thresholding(gray)              
+        img = cv2.imread(invoice_path)  
+        if img is None:
+            print(f"Impossible de lire l'image : {invoice_path}, Veuillez réassayer")
+            continue
 
-    text = draw_bounding_boxes(thresh, invoice_path.replace(".png", "_boxes.png"))  
-    #print(f"Texte extrait : {text}")
+        resized_img = resize_image(img, scale=2) 
+        masked_img = mask_photo(resized_img)      
+        gray = grayscale(masked_img)            
+        thresh = thresholding(gray)              
+
+        text = draw_bounding_boxes(thresh, invoice_path.replace(".png", "_boxes.png"))  
+        #print(f"Texte extrait : {text}")
 
 if __name__ == "__main__":
-    img = cv2.imread(input_path)
-    resized_img = resize_image(img, scale=2) 
-    masked_img = mask_photo(resized_img)      
-    gray = grayscale(masked_img)            
-    thresh = thresholding(gray)              
-    draw_bounding_boxes(thresh, output_path) 
-    get_invoice_files(base_path="../data/factures")
+    process_invoices()
 

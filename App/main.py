@@ -16,6 +16,8 @@ from fastapi.security.utils import get_authorization_scheme_param
 import shutil
 import psycopg2
 from typing import List
+from services.tesseract_ocr import extract_text
+from services.qrcode_ocr import decode
 
 load_dotenv()
 SECRET_KEY = os.getenv("SECRET_KEY")
@@ -158,10 +160,23 @@ async def documentation(request: Request, user: User = Depends(get_current_user)
     return templates.TemplateResponse("documentation.html", {"request": request, "nom_app": "PROCR"})
 
 @app.get("/qr_tesseract", response_class=HTMLResponse)
-async def qr_tesseract_page(request: Request, user: User = Depends(get_current_user)):
-    return templates.TemplateResponse("qr_tesseract.html", {"request": request})
-
-
+async def qrtesseract_page(    
+    request: Request, 
+    filename: str = Query(None) 
+):
+    if not filename:
+        uploads_dir = "static/uploads"
+        files = os.listdir(uploads_dir)
+        if files:
+            filename = files[-1]
+    
+    if not filename:
+        return HTMLResponse(content="Aucun fichier trouvé", status_code=404)
+    
+    return templates.TemplateResponse("qr_tesseract.html", {
+        "request": request, 
+        "image_path": f"/static/uploads/{filename}"
+    })
 
 @app.get("/register", response_class=HTMLResponse)
 async def register_page(request: Request):
@@ -221,3 +236,17 @@ async def upload_file(
         shutil.copyfileobj(file.file, buffer)
 
     return RedirectResponse(url=f"/qr_tesseract?filename={standard_filename}", status_code=303)
+
+@app.post("/ocrtessqr")
+async def ocr_tesseract_qr() :
+    image_files = get_invoice_files()  
+
+    if not image_files:
+        return JSONResponse(content={"error": "Aucune image trouvée"}, status_code=400)
+
+    image_path = image_files[0]  
+
+    qr_data = extract_qr_data(image_path)  
+    ocr_text = process_image(image_path)  
+
+    return JSONResponse(content={"ocr_text": ocr_text, "qr_code": qr_data})
