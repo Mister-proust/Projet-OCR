@@ -92,9 +92,8 @@
         </form>
     </div>
     
-    <!-- Stocker le message sous forme de tableau JS -->
     <script>
-        let ocrLines = {{ message.split('\n') | tojson }};
+        let ocrLines = JSON.parse("{{ message.split('\n') | tojson | safe }}");
     </script>
 {% endif %}
 

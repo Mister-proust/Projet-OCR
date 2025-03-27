@@ -19,9 +19,18 @@ import psycopg2
 from typing import List
 
 load_dotenv()
-SECRET_KEY = os.getenv("SECRET_KEY", "une_cle_secrete_temporaire_a_changer")
+SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
+mon_schema = os.getenv("DB_SCHEMA")
+conn = psycopg2.connect(
+    dbname=os.getenv("DB_NAME"),
+    user=os.getenv("DB_USER"),
+    password=os.getenv("DB_PASS"),
+    host=os.getenv("DB_HOST"),
+    port=os.getenv("DB_PORT")
+)
+cursor = conn.cursor()
 
 app = FastAPI()
 
@@ -159,27 +168,6 @@ async def qr_tesseract_page(request: Request, user: User = Depends(get_current_u
 async def tesseract_page(request: Request, user: User = Depends(get_current_user)):
     return templates.TemplateResponse("tesseract.html", {"request": request})
 
-@app.get("/azure", response_class=HTMLResponse)
-async def azure_page(
-    request: Request, 
-    filename: str = Query(None)  # Paramètre optionnel
-):
-    # Si pas de filename, essayer de trouver le dernier fichier uploadé
-    if not filename:
-        uploads_dir = "static/uploads"
-        files = os.listdir(uploads_dir)
-        if files:
-            # Prendre le dernier fichier uploadé
-            filename = files[-1]
-    
-    if not filename:
-        return HTMLResponse(content="Aucun fichier trouvé", status_code=404)
-    
-    return templates.TemplateResponse("azure.html", {
-        "request": request, 
-        "image_path": f"/static/uploads/{filename}"
-    })
-
 @app.get("/qr_azure", response_class=HTMLResponse)
 async def azure_page(request: Request, user: User = Depends(get_current_user)):
     return templates.TemplateResponse("qr_azure.html", {"request": request})
@@ -248,6 +236,29 @@ async def upload_file(
 
     return RedirectResponse(url=f"/azure?filename={standard_filename}", status_code=303)
 
+@app.get("/azure", response_class=HTMLResponse)
+async def azure_page(
+    request: Request, 
+    filename: str = Query(None)  # Paramètre optionnel
+):
+    # Si pas de filename, essayer de trouver le dernier fichier uploadé
+    if not filename:
+        uploads_dir = "static/uploads"
+        files = os.listdir(uploads_dir)
+        if files:
+            # Prendre le dernier fichier uploadé
+            filename = files[-1]
+    
+    if not filename:
+        return HTMLResponse(content="Aucun fichier trouvé", status_code=404)
+    
+    return templates.TemplateResponse("azure.html", {
+        "request": request, 
+        "image_path": f"/static/uploads/{filename}",
+        "message" : ""
+    })
+
+
 @app.post("/azure_ocr")
 async def azure_ocr(
     request: Request, 
@@ -264,10 +275,14 @@ async def azure_ocr(
 async def save_selection(
     request: Request,
     table_names: List[str] = Form(...),
-    new_columns: List[str] = Form(...),
-    selected_text: List[str] = Form(...),
-    column_name: List[str] = Form(...)
+    new_columns: List[str] = Form([]),
+    selected_text: List[str] = Form([]),
+    column_name: List[str] = Form([])
 ):
+
+    print(table_names, new_columns, selected_text, column_name)
+
+    cursor.execute('SET search_path TO mon_schema')
     try:
         for i, table_name in enumerate(table_names):
             # Création de la table avec des colonnes dynamiques
