@@ -57,20 +57,101 @@
             </form>
         </div>
     </div>
-        <!-- Afficher le texte OCR si disponible -->
-        {% if message %}
-        <div class="rounded-box3">
-            <h2>Résultat OCR</h2>
-            <p>{{ message }}</p>
-        </div>
-    {% endif %}
+    {% if message %}
+    <div class="rounded-box3">
+        <h2>Résultat OCR</h2>
+        <form action="/save_selection" method="post">
+            <div id="tables-container">
+                <!-- Premier tableau par défaut -->
+                <div class="table-group">
+                    <h3>Tableau 1</h3>
+                    <label for="table_name_1">Nom du tableau :</label>
+                    <input type="text" name="table_names[]" required>
 
-    <!-- Afficher l'image annotée si disponible -->
-    {% if image %}
-        <div class="mt-4">
-            <h3>Image annotée</h3>
-            <img src="{{ image }}" alt="Image avec annotations">
+                    <label for="new_columns_1">Ajouter des colonnes (séparées par des virgules) :</label>
+                    <input type="text" class="new-columns" name="new_columns[]" placeholder="ex: Nom, Prénom, Âge" oninput="updateColumnNames(this)">
+
+                    <div class="ocr-result">
+                        {% for line in message.split('\n') %}
+                            <div>
+                                <input type="checkbox" name="selected_text[]" value="{{ line }}">
+                                <label>{{ line }}</label>
+                                <select name="column_name[]" class="column-select">
+                                    <option value="colonne1">Colonne 1</option>
+                                    <option value="colonne2">Colonne 2</option>
+                                    <option value="colonne3">Colonne 3</option>
+                                </select>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <button type="button" onclick="addTable()" class="btn btn-info">Ajouter un tableau</button>
+            <button type="submit" class="btn btn-success">Enregistrer</button>
+        </form>
+    </div>
+    
+    <!-- Stocker le message sous forme de tableau JS -->
+    <script>
+        let ocrLines = {{ message.split('\n') | tojson }};
+    </script>
+{% endif %}
+
+<script>
+let tableCount = 1;
+
+function addTable() {
+    tableCount++;
+    let tablesContainer = document.getElementById("tables-container");
+
+    let newTable = document.createElement("div");
+    newTable.classList.add("table-group");
+    newTable.innerHTML = `
+        <h3>Tableau ${tableCount}</h3>
+        <label>Nom du tableau :</label>
+        <input type="text" name="table_names[]" required>
+
+        <label>Ajouter des colonnes (séparées par des virgules) :</label>
+        <input type="text" class="new-columns" name="new_columns[]" placeholder="ex: Nom, Prénom, Âge" oninput="updateColumnNames(this)">
+
+        <div class="ocr-result">
+            ${ocrLines.map(line => `
+                <div>
+                    <input type="checkbox" name="selected_text[]" value="${line}">
+                    <label>${line}</label>
+                    <select name="column_name[]" class="column-select">
+                        <option value="colonne1">Colonne 1</option>
+                        <option value="colonne2">Colonne 2</option>
+                        <option value="colonne3">Colonne 3</option>
+                    </select>
+                </div>
+            `).join('')}
         </div>
-    {% endif %}
+    `;
+
+    tablesContainer.appendChild(newTable);
+}
+
+function updateColumnNames(inputElement) {
+    let newColumnsInput = inputElement.value;
+    let columnSelects = inputElement.parentElement.querySelectorAll(".column-select");
+
+    if (newColumnsInput.trim() !== "") {
+        let columnNames = newColumnsInput.split(",").map(col => col.trim());
+
+        columnSelects.forEach(select => {
+            select.innerHTML = "";
+            columnNames.forEach((colName, index) => {
+                let option = document.createElement("option");
+                option.value = `colonne${index + 1}`;
+                option.textContent = colName;
+                select.appendChild(option);
+            });
+        });
+    }
+}
+</script>
+
 </body>
 </html>

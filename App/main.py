@@ -15,6 +15,8 @@ from typing import Optional
 from fastapi.security.utils import get_authorization_scheme_param
 import shutil
 from services.azure_ocr import get_words
+import psycopg2
+from typing import List
 
 load_dotenv()
 SECRET_KEY = os.getenv("SECRET_KEY", "une_cle_secrete_temporaire_a_changer")
@@ -256,3 +258,36 @@ async def azure_ocr(
     texte_ocr = "\n".join([" ".join([word.text for word in line.words]) for block in result.read.blocks for line in block.lines])
 
     return templates.TemplateResponse("azure.html", {"request": request, "message": texte_ocr})
+
+
+@app.post("/save_selection")
+async def save_selection(
+    request: Request,
+    table_names: List[str] = Form(...),
+    new_columns: List[str] = Form(...),
+    selected_text: List[str] = Form(...),
+    column_name: List[str] = Form(...)
+):
+    try:
+        for i, table_name in enumerate(table_names):
+            # Création de la table avec des colonnes dynamiques
+            existing_columns = ["id SERIAL PRIMARY KEY"]
+            
+            if new_columns[i]:
+                column_names = [col.strip() for col in new_columns[i].split(",")]
+                additional_columns = [f"{col.replace(' ', '_')} TEXT" for col in column_names]
+                existing_columns.extend(additional_columns)
+
+            column_definitions = ", ".join(existing_columns)
+            cursor.execute(f"CREATE TABLE IF NOT EXISTS {table_name} ({column_definitions});")
+
+            # Insertion des données dans la table associée
+            for text, col in zip(selected_text, column_name):
+                cursor.execute(f"ALTER TABLE {table_name} ADD COLUMN IF NOT EXISTS {col} TEXT;")
+                cursor.execute(f"INSERT INTO {table_name} ({col}) VALUES (%s)", (text,))
+
+        conn.commit()
+        return {"message": "Données enregistrées avec succès"}
+
+    except Exception as e:
+        return {"error": str(e)}
