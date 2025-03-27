@@ -122,8 +122,6 @@ async def login_for_access_token(
     access_token = create_access_token(
         data={"sub": user.email}, expires_delta=access_token_expires
     )
-
-    # Ne pas préfixer le token avec "Bearer" dans le cookie
     response = RedirectResponse(url="/afterlogin", status_code=303)
     response.set_cookie(key="access_token", value=access_token, httponly=True)
     
@@ -253,9 +251,8 @@ async def azure_ocr(
     request: Request, 
     db: Session = Depends(get_db)
 ):
-    result, image_enregistree = get_words()
-    image_url = image_enregistree.replace("./static/", "/static/")
+    result = get_words()
 
     texte_ocr = "\n".join([" ".join([word.text for word in line.words]) for block in result.read.blocks for line in block.lines])
 
-    return templates.TemplateResponse("azure.html", {"request": request, "message": texte_ocr, "image" : image_url})
+    return templates.TemplateResponse("azure.html", {"request": request, "message": texte_ocr})
