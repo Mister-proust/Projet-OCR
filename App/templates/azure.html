@@ -75,7 +75,7 @@
                         {% for line in message.split('\n') %}
                             <div>
                                 <input type="checkbox" name="selected_text[]" value="{{ line }}">
-                                <label>{{ line }}</label>
+                                <textarea name="edited_text[]" rows="1" cols="50"> {{ line }} </textarea>
                                 <select name="column_name[]" class="column-select">
                                     <option value="colonne1">Colonne 1</option>
                                     <option value="colonne2">Colonne 2</option>
@@ -151,6 +151,27 @@ function updateColumnNames(inputElement) {
         });
     }
 }
+
+document.addEventListener("DOMContentLoaded", function() {
+    const checkboxes = document.querySelectorAll("input[name='selected_text[]']");
+    const textareas = document.querySelectorAll("textarea[name='edited_text[]']");
+
+    checkboxes.forEach((checkbox, index) => {
+        checkbox.addEventListener("change", function() {
+            if (this.checked) {
+                textareas[index].disabled = false;
+            } else {
+                textareas[index].disabled = true;
+            }
+        });
+
+        // Désactiver la modification si la ligne n'est pas sélectionnée au départ
+        if (!checkbox.checked) {
+            textareas[index].disabled = true;
+        }
+    });
+});
+
 </script>
 
 </body>
