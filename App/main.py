@@ -14,7 +14,6 @@ from datetime import datetime, timedelta
 from typing import Optional
 from fastapi.security.utils import get_authorization_scheme_param
 import shutil
-from services.azure_ocr import get_words
 import psycopg2
 from typing import List
 
@@ -146,8 +145,6 @@ async def afterlogin(request: Request, user: User = Depends(get_current_user)):
 async def importfichier(request: Request, user: User = Depends(get_current_user)):
     return templates.TemplateResponse("importfichier.html", {"request": request, "nom_app": "PROCR"})
 
-
-
 @app.get("/bdd", response_class=HTMLResponse)
 async def bdd(request: Request, user: User = Depends(get_current_user)):
     return templates.TemplateResponse("bdd.html", {"request": request, "nom_app": "PROCR"})
@@ -164,13 +161,7 @@ async def documentation(request: Request, user: User = Depends(get_current_user)
 async def qr_tesseract_page(request: Request, user: User = Depends(get_current_user)):
     return templates.TemplateResponse("qr_tesseract.html", {"request": request})
 
-@app.get("/tesseract", response_class=HTMLResponse)
-async def tesseract_page(request: Request, user: User = Depends(get_current_user)):
-    return templates.TemplateResponse("tesseract.html", {"request": request})
 
-@app.get("/qr_azure", response_class=HTMLResponse)
-async def azure_page(request: Request, user: User = Depends(get_current_user)):
-    return templates.TemplateResponse("qr_azure.html", {"request": request})
 
 @app.get("/register", response_class=HTMLResponse)
 async def register_page(request: Request):
@@ -217,92 +208,16 @@ async def logout_get():
 @app.post("/uploadfile")
 async def upload_file(
     file: UploadFile = File(...), 
-    qr: bool = Form(False), 
-    tesseract: bool = Form(False), 
-    azure: bool = Form(False)
 ):
     if not file.filename:
         return {"error": "Pas de fichier sélectionné"}
 
-    # Récupération de l'extension du fichier d'origine
     _, file_extension = os.path.splitext(file.filename)
     
-    # Définition d'un nom standard
     standard_filename = f"image_telecharge{file_extension}"
     file_path = f"static/uploads/{standard_filename}"
 
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
-    return RedirectResponse(url=f"/azure?filename={standard_filename}", status_code=303)
-
-@app.get("/azure", response_class=HTMLResponse)
-async def azure_page(
-    request: Request, 
-    filename: str = Query(None)  # Paramètre optionnel
-):
-    # Si pas de filename, essayer de trouver le dernier fichier uploadé
-    if not filename:
-        uploads_dir = "static/uploads"
-        files = os.listdir(uploads_dir)
-        if files:
-            # Prendre le dernier fichier uploadé
-            filename = files[-1]
-    
-    if not filename:
-        return HTMLResponse(content="Aucun fichier trouvé", status_code=404)
-    
-    return templates.TemplateResponse("azure.html", {
-        "request": request, 
-        "image_path": f"/static/uploads/{filename}",
-        "message" : ""
-    })
-
-
-@app.post("/azure_ocr")
-async def azure_ocr(
-    request: Request, 
-    db: Session = Depends(get_db)
-):
-    result = get_words()
-
-    texte_ocr = "\n".join([" ".join([word.text for word in line.words]) for block in result.read.blocks for line in block.lines])
-
-    return templates.TemplateResponse("azure.html", {"request": request, "message": texte_ocr})
-
-
-@app.post("/save_selection")
-async def save_selection(
-    request: Request,
-    table_names: List[str] = Form(...),
-    new_columns: List[str] = Form([]),
-    selected_text: List[str] = Form([]),
-    column_name: List[str] = Form([])
-):
-
-    print(table_names, new_columns, selected_text, column_name)
-
-    cursor.execute('SET search_path TO mon_schema')
-    try:
-        for i, table_name in enumerate(table_names):
-            # Création de la table avec des colonnes dynamiques
-            existing_columns = ["id SERIAL PRIMARY KEY"]
-            
-            if new_columns[i]:
-                column_names = [col.strip() for col in new_columns[i].split(",")]
-                additional_columns = [f"{col.replace(' ', '_')} TEXT" for col in column_names]
-                existing_columns.extend(additional_columns)
-
-            column_definitions = ", ".join(existing_columns)
-            cursor.execute(f"CREATE TABLE IF NOT EXISTS {table_name} ({column_definitions});")
-
-            # Insertion des données dans la table associée
-            for text, col in zip(selected_text, column_name):
-                cursor.execute(f"ALTER TABLE {table_name} ADD COLUMN IF NOT EXISTS {col} TEXT;")
-                cursor.execute(f"INSERT INTO {table_name} ({col}) VALUES (%s)", (text,))
-
-        conn.commit()
-        return {"message": "Données enregistrées avec succès"}
-
-    except Exception as e:
-        return {"error": str(e)}
+    return RedirectResponse(url=f"/qr_tesseract?filename={standard_filename}", status_code=303)

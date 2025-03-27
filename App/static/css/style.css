@@ -122,3 +122,40 @@ body {
     height: auto;
     max-width: 300px; 
 }
+
+
+        .rounded-box2 {
+            background-color: #f5e7e8; 
+            border-radius: 45px;
+            padding: 20px;
+            margin: 10px auto;
+            max-width: 500px;
+            margin-top: 20px ;
+            font-size: 25px;
+            font-family: 'Poppins', Snell Rouhand, cursive;
+        }
+        .custom-button {
+            background-color: #f5e7e8; 
+            color: black;
+            font-weight: bold;
+            padding: 10px 20px;
+            border: 2px solid #f5e7e8;
+            border-radius: 10px;
+            transition: all 0.3s ease-in-out;
+            font-size : 20px;
+        }
+
+        .custom-button:hover {
+            background-color: #d63384; 
+            border-color: #d63384;
+        }
+
+        #options-container {
+            display: none; /* Caché par défaut */
+            margin-top: 20px;
+            background-color: #f5e7e8;
+            padding: 20px;
+            border-radius: 10px;
+            max-width: 800px;
+            margin: 20px auto;
+        }
