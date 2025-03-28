@@ -103,24 +103,21 @@ def get_invoice_files():
     return images
 
 
-def process_invoices(): 
-    invoice_files = get_invoice_files()
+def process_invoices(image_path):  
+    print(f"Traitement de : {image_path}")
 
-    for invoice_path in invoice_files:
-        print(f"Traitement de : {invoice_path}")
+    img = cv2.imread(image_path)  
+    if img is None:
+        print(f"Impossible de lire l'image : {image_path}, veuillez réessayer")
+        return None  
 
-        img = cv2.imread(invoice_path)  
-        if img is None:
-            print(f"Impossible de lire l'image : {invoice_path}, Veuillez réassayer")
-            continue
+    resized_img = resize_image(img, scale=2)  
+    masked_img = mask_photo(resized_img)      
+    gray = grayscale(masked_img)            
+    thresh = thresholding(gray)              
 
-        resized_img = resize_image(img, scale=2) 
-        masked_img = mask_photo(resized_img)      
-        gray = grayscale(masked_img)            
-        thresh = thresholding(gray)              
-
-        text = draw_bounding_boxes(thresh, invoice_path.replace(".png", "_boxes.png"))  
-        #print(f"Texte extrait : {text}")
+    ocr_data = draw_bounding_boxes(thresh)  # Récupération du texte
+    return ocr_data  
 
 if __name__ == "__main__":
     process_invoices()

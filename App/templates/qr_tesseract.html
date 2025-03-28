@@ -57,19 +57,35 @@
                 <p id="ocrResult" class="mt-3"></p>
             </div>
         </div>
-
         <script>
             document.getElementById("launchOcrBtn").addEventListener("click", function() {
-                fetch("/azure_ocr", { method: "POST" })
-                    .then(response => response.json())
-                    .then(data => {
-                        let resultText = "<strong>Résultat OCR :</strong> " + (data.ocr_text || "Aucun texte détecté.");
-                        if (data.qr_code) {
-                            resultText += "<br><strong>QR Code :</strong> " + data.qr_code;
-                        }
-                        document.getElementById("ocrResult").innerHTML = resultText;
-                    })
-                    .catch(error => console.error("Erreur :", error));
+                fetch("/ocrtessqr", { 
+                    method: "POST",
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => {
+                    console.log('Response status:', response.status);
+                    console.log('Response headers:', response.headers);
+                    if (!response.ok) {
+                        return response.text().then(text => {
+                            throw new Error(`HTTP error! status: ${response.status}, message: ${text}`);
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Received data:', data);
+                    let resultText = "<strong>Résultat OCR : Fonctionnel</strong> ";
+                    document.getElementById("ocrResult").innerHTML = resultText;
+                })
+                .catch(error => {
+                    console.error("Erreur détaillée :", error);
+                    document.getElementById("ocrResult").innerHTML = 
+                        `<strong>Erreur : ${error.message}</strong>`;
+                });
             });
             </script>
     </body>            

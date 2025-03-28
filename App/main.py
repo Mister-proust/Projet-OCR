@@ -1,37 +1,27 @@
-from fastapi import FastAPI, Request, UploadFile, File, Query, Form, HTTPException, Depends
+from fastapi import FastAPI, Request, UploadFile, File, Query, Form, HTTPException, Depends, APIRouter
 from fastapi.responses import JSONResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 import os
-import subprocess
 from fastapi.templating import Jinja2Templates
 from dotenv import load_dotenv
-from passlib.context import CryptContext  # Assurez-vous d'installer passlib avec pip install passlib[bcrypt]
+from passlib.context import CryptContext  
 from sqlalchemy.orm import Session
 from services.authentification import User, get_db
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 import jwt
 from datetime import datetime, timedelta
 from typing import Optional
-from fastapi.security.utils import get_authorization_scheme_param
 import shutil
-import psycopg2
-from typing import List
-from services.tesseract_ocr import extract_text
-from services.qrcode_ocr import decode
+from services.tesseract_ocr import get_invoice_files, process_invoices
+from services.qrcode_ocr import get_invoice_files, extract_qr_data
+from Database.db_connection import SQLClient
+from Database.models.table_database import Utilisateur, Facture, Article
 
-load_dotenv()
+
+load_dotenv(override=True)
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
-mon_schema = os.getenv("DB_SCHEMA")
-conn = psycopg2.connect(
-    dbname=os.getenv("DB_NAME"),
-    user=os.getenv("DB_USER"),
-    password=os.getenv("DB_PASS"),
-    host=os.getenv("DB_HOST"),
-    port=os.getenv("DB_PORT")
-)
-cursor = conn.cursor()
 
 app = FastAPI()
 
@@ -196,13 +186,11 @@ async def register_user(
             {"request": request, "nom_app": "PROCR", "error": "Cet email est déjà utilisé."}
         )
     
-    # Hashage du mot de passe et création de l'utilisateur
     hashed_password = get_password_hash(password)
     new_user = User(email=email, hashed_password=hashed_password)
     db.add(new_user)
     db.commit()
     
-    # Redirection vers la page de connexion
     return templates.TemplateResponse(
         "login.html", 
         {"request": request, "nom_app": "PROCR", "message": "Inscription réussie ! Vous pouvez maintenant vous connecter."}
@@ -238,15 +226,71 @@ async def upload_file(
     return RedirectResponse(url=f"/qr_tesseract?filename={standard_filename}", status_code=303)
 
 @app.post("/ocrtessqr")
-async def ocr_tesseract_qr() :
-    image_files = get_invoice_files()  
+async def ocr_tesseract_qr(request: Request):
+    try:
+        print("Route /ocrtessqr appelée")
+        print(f"Méthode de requête : {request.method}")
+        uploads_dir = "static/uploads"
+        files = os.listdir(uploads_dir)
+        print(f"Fichiers disponibles : {files}")
+        if not files:
+            return JSONResponse(
+                status_code=404, 
+                content={"error": "Aucun fichier trouvé"}
+            )
+        
+        latest_file = os.path.join(uploads_dir, files[-1])
+        
+        client = SQLClient()  # Connexion à la base de données
 
-    if not image_files:
-        return JSONResponse(content={"error": "Aucune image trouvée"}, status_code=400)
+        qr_data = extract_qr_data(latest_file)
+        ocr_text = process_invoices(latest_file)
+        print(ocr_text)
 
-    image_path = image_files[0]  
+        data = {
+            "utilisateur": {},
+            "facture": {},
+            "articles": []
+        }
 
-    qr_data = extract_qr_data(image_path)  
-    ocr_text = process_image(image_path)  
+        if qr_data:
+            data["facture"]["nom_facture"] = qr_data.get("nom_facture", "")
+            data["facture"]["date_facture"] = qr_data.get("date_facture", "")
+            data["utilisateur"]["genre"] = qr_data.get("genre", "")
+            data["utilisateur"]["date_anniversaire"] = qr_data.get("date_anniversaire", "")
 
-    return JSONResponse(content={"ocr_text": ocr_text, "qr_code": qr_data})
+        if "utilisateur" in ocr_text:
+            data["utilisateur"].update(ocr_text["utilisateur"])
+        if "facture" in ocr_text:
+            data["facture"].update(ocr_text["facture"])
+        if "articles" in ocr_text:
+            data["articles"] = ocr_text["articles"]
+
+        if data["facture"].get("nom_facture"):
+            add_data_to_db(client, data)
+
+        return JSONResponse(
+            content={
+                "message": "Données OCR et QR enregistrées avec succès !",
+                "qr_code": bool(qr_data),
+                "ocr_text": ocr_text
+            }
+        )
+    except Exception as e:
+        return JSONResponse(
+            status_code=500, 
+            content={"error": str(e)}
+        )
+    
+def add_data_to_db(client, data):
+    utilisateur = Utilisateur(**data["utilisateur"])
+    client.insert(utilisateur)
+
+    facture = Facture(**data["facture"])
+    client.insert(facture)
+
+    for article_data in data["articles"]:
+        article = Article(**article_data)
+        client.insert(article)
+
+    print(f"Donnée de la facture ajoutée avec succès (nom : {data['facture']['nom_facture']})")
