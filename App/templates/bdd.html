@@ -2,10 +2,13 @@
 <html>
 
 <head>
-    <title>OCR App - Navigation</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OCR App - bdd</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', path='css/frontpicture.css') }}">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.10.25/css/jquery.dataTables.min.css">
     <style>
         body {
             text-align: center;
@@ -105,6 +108,24 @@
         .logout-btn:hover {
             background-color: #a12266;
         }
+        #data_table {
+            background-color: #f5e7e8;
+        }
+    
+        /* Appliquer un fond rosé aux éléments de DataTables (recherche, show entries, etc.) */
+        .dataTables_wrapper {
+            background-color: #f5e7e8;
+        }
+    
+        .dataTables_filter input {
+            background-color: #f5e7e8;
+            border: 1px solid #ddd; /* Optionnel : pour ajouter une bordure */
+        }
+    
+        .dataTables_length select {
+            background-color: #f5e7e8;
+            border: 1px solid #ddd; /* Optionnel : pour ajouter une bordure */
+        }
 
         
     </style>
@@ -136,7 +157,7 @@
                         <a class="nav-link" href="/bdd"><i class="bi bi-pencil-square"></i> Base de données</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/stats"><i class="bi bi-check-circle"></i> Statistiques</a>
+                        <a class="nav-link" href="/monitoring"><i class="bi bi-check-circle"></i> Monitoring</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="/documentation"><i class="bi bi-box-arrow-down"></i> Documentation</a>
@@ -145,3 +166,49 @@
             </div>
         </div>
     </nav>
+
+    <body>
+        <div class="rounded-box2">
+        <h1>Tableau interactif pour {{ table_name }}</h1>
+        
+    
+
+        <form action="/bdd" method="get">
+            <label for="table_select">Sélectionnez une table :</label>
+            <select name="table_name" id="table_select" onchange="this.form.submit()">
+                <option value="Utilisateur" {% if table_name == 'Utilisateur' %}selected{% endif %}>Utilisateur</option>
+                <option value="Facture" {% if table_name == 'Facture' %}selected{% endif %}>Facture</option>
+                <option value="Article" {% if table_name == 'Article' %}selected{% endif %}>Article</option>
+            </select>
+        </form>
+    </div>
+    <table id="data_table" class="display">
+        <thead>
+            <tr>
+                {% for column in data[0].keys() %}
+                    <th>{{ column }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in data %}
+                <tr>
+                    {% for value in row.values() %}
+                        <td>{{ value }}</td>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js"></script>
+    
+    <script>
+        $(document).ready(function() {
+            $('#data_table').DataTable();
+        });
+        </script>
+    
+    </body>
+    </html>

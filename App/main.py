@@ -16,6 +16,7 @@ from services.tesseract_ocr import get_invoice_files, process_invoices
 from services.qrcode_ocr import get_invoice_files, extract_qr_data
 from Database.db_connection import SQLClient
 from Database.models.table_database import Utilisateur, Facture, Article
+import pandas as pd
 
 
 load_dotenv(override=True)
@@ -136,10 +137,6 @@ async def afterlogin(request: Request, user: User = Depends(get_current_user)):
 @app.get("/importfichier", response_class=HTMLResponse)
 async def importfichier(request: Request, user: User = Depends(get_current_user)):
     return templates.TemplateResponse("importfichier.html", {"request": request, "nom_app": "PROCR"})
-
-@app.get("/bdd", response_class=HTMLResponse)
-async def bdd(request: Request, user: User = Depends(get_current_user)):
-    return templates.TemplateResponse("bdd.html", {"request": request, "nom_app": "PROCR"})
 
 @app.get("/stats", response_class=HTMLResponse)
 async def stats(request: Request, user: User = Depends(get_current_user)):
@@ -294,3 +291,64 @@ def add_data_to_db(client, data):
         client.insert(article)
 
     print(f"Donnée de la facture ajoutée avec succès (nom : {data['facture']['nom_facture']})")
+
+
+def get_dataframe(table: str):
+    client = SQLClient()
+    with client.get_session() as session:
+        if table == 'Utilisateur':
+            query = session.query(Utilisateur).all()
+            data = [{
+                'Email': utilisateur.email_personne,
+                'Nom': utilisateur.nom_personne,
+                'Genre': utilisateur.genre,
+                'Ville': utilisateur.ville_personne,
+                'Date Anniversaire': utilisateur.date_anniversaire
+            } for utilisateur in query]
+        elif table == 'Facture':
+            query = session.query(Facture).all()
+            data = [{
+                'Nom Facture': facture.nom_facture,
+                'Date Facture': facture.date_facture,
+                'Total': facture.total_facture,
+                'Email Utilisateur': facture.email_personne
+            } for facture in query]
+        elif table == 'Article':
+            query = session.query(Article).all()
+            data = [{
+                'Nom Facture': article.nom_facture,
+                'Nom Article': article.nom_article,
+                'Quantité': article.quantite,
+                'Prix': article.prix
+            } for article in query]
+        
+        return pd.DataFrame(data)
+
+@app.get("/bdd")
+async def bdd(request: Request, table_name:Optional[str] = None, search: Optional[str] = None):
+
+    search = None
+    print(table_name, search)
+    # Vérifier si la table est valide
+    if table_name not in ['Utilisateur', 'Facture', 'Article']:
+        table_name= "Article"
+        
+    # Récupérer les données de la table sélectionnée
+    df = get_dataframe(table_name)
+    
+    # Si une recherche est effectuée, filtrer les données
+    if search:
+        df = df[df.apply(lambda row: row.astype(str).str.contains(search, case=False).any(), axis=1)]
+
+    # Convertir les données en format dict (liste de dictionnaires)
+    data = df.to_dict(orient='records')
+
+    # Passer 'data' dans le contexte du template
+    return templates.TemplateResponse("bdd.html", {
+        "request": request,
+        "nom_app": "PROCR",
+        "data": data,  # Passer 'data' ici
+        "table_name": table_name  # Passer 'table_name' pour l'afficher dans le titre
+    })
+
+"""@app.post ("/bdd/tables")"""
