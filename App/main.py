@@ -17,7 +17,7 @@ from services.qrcode_ocr import get_invoice_files, extract_qr_data
 from Database.db_connection import SQLClient
 from Database.models.table_database import Utilisateur, Facture, Article
 import pandas as pd
-
+from prometheus_fastapi_instrumentator import Instrumentator
 
 load_dotenv(override=True)
 SECRET_KEY = os.getenv("SECRET_KEY")
@@ -25,6 +25,8 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 app = FastAPI()
+
+Instrumentator().instrument(app).expose(app)
 
 app.mount("/static", StaticFiles(directory="./static"), name="static")
 
@@ -138,9 +140,9 @@ async def afterlogin(request: Request, user: User = Depends(get_current_user)):
 async def importfichier(request: Request, user: User = Depends(get_current_user)):
     return templates.TemplateResponse("importfichier.html", {"request": request, "nom_app": "PROCR"})
 
-@app.get("/stats", response_class=HTMLResponse)
-async def stats(request: Request, user: User = Depends(get_current_user)):
-    return templates.TemplateResponse("stats.html", {"request": request, "nom_app": "PROCR"})
+@app.get("/monitoring", response_class=HTMLResponse)
+async def monitoring(request: Request, user: User = Depends(get_current_user)):
+    return templates.TemplateResponse("monitoring.html", {"request": request, "nom_app": "PROCR"})
 
 @app.get("/documentation", response_class=HTMLResponse)
 async def documentation(request: Request, user: User = Depends(get_current_user)):
@@ -351,4 +353,3 @@ async def bdd(request: Request, table_name:Optional[str] = None, search: Optiona
         "table_name": table_name  # Passer 'table_name' pour l'afficher dans le titre
     })
 
-"""@app.post ("/bdd/tables")"""
