@@ -204,13 +204,13 @@ async def register_user(
 @app.post("/logout")
 async def logout():
     response = RedirectResponse(url="/")
-    response.delete_cookie("access_token")  # Supprime le token de connexion
+    response.delete_cookie("access_token")  
     return response
 
 @app.get("/logout")
 async def logout_get():
     response = RedirectResponse(url="/")
-    response.delete_cookie("access_token")  # Supprime le token de connexion
+    response.delete_cookie("access_token") 
     return response
 
 @app.post("/uploadfile")
@@ -233,7 +233,7 @@ async def upload_file(
 @app.post("/ocrtessqr")
 async def ocr_tesseract_qr(request: Request):
     start_time = time.time()
-    client = SQLClient()  # Connexion à la base de données
+    client = SQLClient()  
     try:
         print("Route /ocrtessqr appelée")
         print(f"Méthode de requête : {request.method}")
@@ -297,7 +297,7 @@ async def ocr_tesseract_qr(request: Request):
             content={"error": str(e)}
         )
     finally:
-        pass # Pas besoin de fermer la session ici car SQLClient gère ça avec le contexte
+        pass 
     
 def add_data_to_db(client, data):
     utilisateur = Utilisateur(**data["utilisateur"])
@@ -355,17 +355,13 @@ async def bdd(request: Request, table_name:Optional[str] = None, search: Optiona
     if table_name not in ['Utilisateur', 'Facture', 'Article']:
         table_name= "Article"
         
-    # Récupérer les données de la table sélectionnée
     df = get_dataframe(table_name)
-    
-    # Si une recherche est effectuée, filtrer les données
+
     if search:
         df = df[df.apply(lambda row: row.astype(str).str.contains(search, case=False).any(), axis=1)]
 
-    # Convertir les données en format dict (liste de dictionnaires)
     data = df.to_dict(orient='records')
 
-    # Passer 'data' dans le contexte du template
     return templates.TemplateResponse("bdd.html", {
         "request": request,
         "nom_app": "PROCR",
@@ -388,7 +384,6 @@ def calculate_average_basket():
         factures = session.query(Facture).all()
         if not factures:
             return 0
-        # Filtrer les factures avec un total_facture non nul
         valid_factures = [facture for facture in factures if facture.total_facture is not None]
         if not valid_factures:
             return 0
@@ -399,7 +394,6 @@ def calculate_total_revenue():
     client = SQLClient()
     with client.get_session() as session:
         factures = session.query(Facture).all()
-        # Utiliser une compréhension de liste avec une condition pour éviter les None
         return sum(facture.total_facture for facture in factures if facture.total_facture is not None)
 
 def get_invoice_count():
@@ -415,25 +409,21 @@ def get_unique_user_count():
 def get_most_prolific_clients(limit=5):
     client = SQLClient()
     with client.get_session() as session:
-        # Group by email and sum the total amount of invoices
         results = session.query(Utilisateur.nom_personne, Utilisateur.email_personne, Facture.total_facture).\
             join(Facture, Utilisateur.email_personne == Facture.email_personne).\
             all()
         client_totals = {}
         for name, email, total in results:
-            if total is not None:  # Ajouter cette condition pour ignorer les valeurs None
+            if total is not None:  
                 if email not in client_totals:
                     client_totals[email] = {"name": name, "total": 0}
                 client_totals[email]["total"] += total
-
-        # Sort clients by total amount spent
         sorted_clients = sorted(client_totals.items(), key=lambda item: item[1]["total"], reverse=True)
         return [{"name": client[1]["name"], "email": client[0], "total_spent": client[1]["total"]} for client in sorted_clients[:limit]]
 
 def get_most_regular_clients(limit=5):
     client = SQLClient()
     with client.get_session() as session:
-        # Group by email and count the number of invoices
         results = session.query(Utilisateur.nom_personne, Utilisateur.email_personne).\
             join(Facture, Utilisateur.email_personne == Facture.email_personne).\
             all()
@@ -443,14 +433,12 @@ def get_most_regular_clients(limit=5):
                 client_counts[email] = {"name": name, "count": 0}
             client_counts[email]["count"] += 1
 
-        # Sort clients by the number of invoices
         sorted_clients = sorted(client_counts.items(), key=lambda item: item[1]["count"], reverse=True)
         return [{"name": client[1]["name"], "email": client[0], "invoice_count": client[1]["count"]} for client in sorted_clients[:limit]]
 
 def get_most_demanding_cities(limit=5):
     client = SQLClient()
     with client.get_session() as session:
-        # Group by city and count the number of users
         results = session.query(Utilisateur.ville_personne).all()
         city_counts = Counter([result[0] for result in results])
         most_common_cities = city_counts.most_common(limit)
@@ -459,13 +447,11 @@ def get_most_demanding_cities(limit=5):
 def get_most_purchased_articles(limit=5):
     client = SQLClient()
     with client.get_session() as session:
-        # Group by article name and sum the quantity
         results = session.query(Article.nom_article, Article.quantite).all()
         article_counts = {}
         for name, quantity in results:
             article_counts[name] = article_counts.get(name, 0) + quantity
 
-        # Sort articles by total quantity purchased
         sorted_articles = sorted(article_counts.items(), key=lambda item: item[1], reverse=True)
         return [{"article": article, "total_quantity": quantity} for article, quantity in sorted_articles[:limit]]
 
@@ -484,7 +470,7 @@ async def stats_dashboard(request: Request, user: User = Depends(get_current_use
     most_regular_clients = get_most_regular_clients()
     most_demanding_cities = get_most_demanding_cities()
     most_purchased_articles = get_most_purchased_articles()
-    null_total_facture_count = get_null_total_facture_count() # Appel de la nouvelle fonction
+    null_total_facture_count = get_null_total_facture_count()
 
     return templates.TemplateResponse(
         "stats.html",
@@ -499,6 +485,6 @@ async def stats_dashboard(request: Request, user: User = Depends(get_current_use
             "most_regular_clients": most_regular_clients,
             "most_demanding_cities": most_demanding_cities,
             "most_purchased_articles": most_purchased_articles,
-            "null_total_facture_count": null_total_facture_count, # Passage de la nouvelle variable au template
+            "null_total_facture_count": null_total_facture_count, 
         },
     )

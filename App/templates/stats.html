@@ -52,7 +52,6 @@
             <h2>Tableau de Bord des Statistiques</h2>
         </div>
 
-        <!-- Première rangée de statistiques -->
         <div class="row mb-4">
             <div class="col-md-4">
                 <div class="card p-3">
@@ -74,7 +73,6 @@
             </div>
         </div>
 
-        <!-- Deuxième rangée de statistiques -->
         <div class="row mb-4">
             <div class="col-md-6">
                 <div class="card p-3">
@@ -90,11 +88,10 @@
             </div>
         </div>
 
-        <!-- Troisième rangée - Clients -->
         <div class="row mb-4">
             <div class="col-md-6">
                 <div class="card p-3">
-                    <h4>Clients les Plus Prolifiques (Top 5)</h4>
+                    <h4>Clients les Plus Prolifiques</h4>
                     <ul>
                         {% for client in most_prolific_clients %}
                         <li>{{ client.name }} ({{ client.email }}): {{ client.total_spent|round(2) }} €</li>
@@ -106,7 +103,7 @@
             </div>
             <div class="col-md-6">
                 <div class="card p-3">
-                    <h4>Clients les Plus Réguliers (Top 5)</h4>
+                    <h4>Clients les Plus Réguliers</h4>
                     <ul>
                         {% for client in most_regular_clients %}
                         <li>{{ client.name }} ({{ client.email }}): {{ client.invoice_count }} factures</li>
@@ -117,12 +114,11 @@
                 </div>
             </div>
         </div>
-
-        <!-- Quatrième rangée - Villes et Articles -->
+        
         <div class="row mb-4">
             <div class="col-md-6">
                 <div class="card p-3">
-                    <h4>Villes les Plus Demandeuses (Top 5)</h4>
+                    <h4>Villes les Plus Demandeuses</h4>
                     <ul>
                         {% for city_data in most_demanding_cities %}
                         <li>{{ city_data.city }}: {{ city_data.count }} utilisateurs</li>
@@ -134,7 +130,7 @@
             </div>
             <div class="col-md-6">
                 <div class="card p-3">
-                    <h4>Articles les Plus Achetés (Top 5)</h4>
+                    <h4>Articles les Plus Achetés</h4>
                     <ul>
                         {% for article_data in most_purchased_articles %}
                         <li>{{ article_data.article }}: {{ article_data.total_quantity }} unités</li>
