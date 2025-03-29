@@ -15,9 +15,12 @@ import shutil
 from services.tesseract_ocr import get_invoice_files, process_invoices
 from services.qrcode_ocr import get_invoice_files, extract_qr_data
 from Database.db_connection import SQLClient
-from Database.models.table_database import Utilisateur, Facture, Article
+from Database.models.table_database import Utilisateur, Facture, Article, Monitoring
 import pandas as pd
 from prometheus_fastapi_instrumentator import Instrumentator
+import time
+from collections import Counter
+
 
 load_dotenv(override=True)
 SECRET_KEY = os.getenv("SECRET_KEY")
@@ -142,7 +145,10 @@ async def importfichier(request: Request, user: User = Depends(get_current_user)
 
 @app.get("/monitoring", response_class=HTMLResponse)
 async def monitoring(request: Request, user: User = Depends(get_current_user)):
-    return templates.TemplateResponse("monitoring.html", {"request": request, "nom_app": "PROCR"})
+    client = SQLClient()
+    with client.get_session() as session:
+        monitoring_data = session.query(Monitoring).order_by(Monitoring.timestamp.desc()).all()
+        return templates.TemplateResponse("monitoring.html", {"request": request, "nom_app": "PROCR", "monitoring_data": monitoring_data})
 
 @app.get("/documentation", response_class=HTMLResponse)
 async def documentation(request: Request, user: User = Depends(get_current_user)):
@@ -226,6 +232,8 @@ async def upload_file(
 
 @app.post("/ocrtessqr")
 async def ocr_tesseract_qr(request: Request):
+    start_time = time.time()
+    client = SQLClient()  # Connexion à la base de données
     try:
         print("Route /ocrtessqr appelée")
         print(f"Méthode de requête : {request.method}")
@@ -233,14 +241,13 @@ async def ocr_tesseract_qr(request: Request):
         files = os.listdir(uploads_dir)
         print(f"Fichiers disponibles : {files}")
         if not files:
+            record_monitoring_data(client, "ocr_processing", status="failure", details="Aucun fichier trouvé")
             return JSONResponse(
-                status_code=404, 
+                status_code=404,
                 content={"error": "Aucun fichier trouvé"}
             )
-        
+
         latest_file = os.path.join(uploads_dir, files[-1])
-        
-        client = SQLClient()  # Connexion à la base de données
 
         qr_data = extract_qr_data(latest_file)
         ocr_text = process_invoices(latest_file)
@@ -267,6 +274,11 @@ async def ocr_tesseract_qr(request: Request):
 
         if data["facture"].get("nom_facture"):
             add_data_to_db(client, data)
+            record_monitoring_data(client, "ocr_data_saved", status="success", details=f"Facture: {data['facture']['nom_facture']}")
+
+        end_time = time.time()
+        processing_time = end_time - start_time
+        record_monitoring_data(client, "ocr_processing_time", value=processing_time, status="success")
 
         return JSONResponse(
             content={
@@ -276,24 +288,32 @@ async def ocr_tesseract_qr(request: Request):
             }
         )
     except Exception as e:
+        end_time = time.time()
+        processing_time = end_time - start_time
+        record_monitoring_data(client, "ocr_processing_time", value=processing_time, status="failure", details=str(e))
+        record_monitoring_data(client, "ocr_processing", status="failure", details=str(e))
         return JSONResponse(
-            status_code=500, 
+            status_code=500,
             content={"error": str(e)}
         )
+    finally:
+        pass # Pas besoin de fermer la session ici car SQLClient gère ça avec le contexte
     
 def add_data_to_db(client, data):
     utilisateur = Utilisateur(**data["utilisateur"])
     client.insert(utilisateur)
+    record_monitoring_data(client, "database_insert", value=1.0, details="Utilisateur ajouté")
 
     facture = Facture(**data["facture"])
     client.insert(facture)
+    record_monitoring_data(client, "database_insert", value=1.0, details="Facture ajoutée")
 
     for article_data in data["articles"]:
         article = Article(**article_data)
         client.insert(article)
+        record_monitoring_data(client, "database_insert", value=1.0, details="Article ajouté")
 
     print(f"Donnée de la facture ajoutée avec succès (nom : {data['facture']['nom_facture']})")
-
 
 def get_dataframe(table: str):
     client = SQLClient()
@@ -353,3 +373,132 @@ async def bdd(request: Request, table_name:Optional[str] = None, search: Optiona
         "table_name": table_name  # Passer 'table_name' pour l'afficher dans le titre
     })
 
+def record_monitoring_data(client: SQLClient, metric_name: str, value: Optional[float] = None, status: Optional[str] = None, details: Optional[str] = None):
+    monitoring_entry = Monitoring(
+        metric_name=metric_name,
+        value=value,
+        status=status,
+        details=details
+    )
+    client.insert(monitoring_entry)
+
+def calculate_average_basket():
+    client = SQLClient()
+    with client.get_session() as session:
+        factures = session.query(Facture).all()
+        if not factures:
+            return 0
+        # Filtrer les factures avec un total_facture non nul
+        valid_factures = [facture for facture in factures if facture.total_facture is not None]
+        if not valid_factures:
+            return 0
+        total_revenue = sum(facture.total_facture for facture in valid_factures)
+        return total_revenue / len(valid_factures) if valid_factures else 0
+
+def calculate_total_revenue():
+    client = SQLClient()
+    with client.get_session() as session:
+        factures = session.query(Facture).all()
+        # Utiliser une compréhension de liste avec une condition pour éviter les None
+        return sum(facture.total_facture for facture in factures if facture.total_facture is not None)
+
+def get_invoice_count():
+    client = SQLClient()
+    with client.get_session() as session:
+        return session.query(Facture).count()
+
+def get_unique_user_count():
+    client = SQLClient()
+    with client.get_session() as session:
+        return session.query(Utilisateur.email_personne).distinct().count()
+
+def get_most_prolific_clients(limit=5):
+    client = SQLClient()
+    with client.get_session() as session:
+        # Group by email and sum the total amount of invoices
+        results = session.query(Utilisateur.nom_personne, Utilisateur.email_personne, Facture.total_facture).\
+            join(Facture, Utilisateur.email_personne == Facture.email_personne).\
+            all()
+        client_totals = {}
+        for name, email, total in results:
+            if total is not None:  # Ajouter cette condition pour ignorer les valeurs None
+                if email not in client_totals:
+                    client_totals[email] = {"name": name, "total": 0}
+                client_totals[email]["total"] += total
+
+        # Sort clients by total amount spent
+        sorted_clients = sorted(client_totals.items(), key=lambda item: item[1]["total"], reverse=True)
+        return [{"name": client[1]["name"], "email": client[0], "total_spent": client[1]["total"]} for client in sorted_clients[:limit]]
+
+def get_most_regular_clients(limit=5):
+    client = SQLClient()
+    with client.get_session() as session:
+        # Group by email and count the number of invoices
+        results = session.query(Utilisateur.nom_personne, Utilisateur.email_personne).\
+            join(Facture, Utilisateur.email_personne == Facture.email_personne).\
+            all()
+        client_counts = {}
+        for name, email in results:
+            if email not in client_counts:
+                client_counts[email] = {"name": name, "count": 0}
+            client_counts[email]["count"] += 1
+
+        # Sort clients by the number of invoices
+        sorted_clients = sorted(client_counts.items(), key=lambda item: item[1]["count"], reverse=True)
+        return [{"name": client[1]["name"], "email": client[0], "invoice_count": client[1]["count"]} for client in sorted_clients[:limit]]
+
+def get_most_demanding_cities(limit=5):
+    client = SQLClient()
+    with client.get_session() as session:
+        # Group by city and count the number of users
+        results = session.query(Utilisateur.ville_personne).all()
+        city_counts = Counter([result[0] for result in results])
+        most_common_cities = city_counts.most_common(limit)
+        return [{"city": city, "count": count} for city, count in most_common_cities]
+
+def get_most_purchased_articles(limit=5):
+    client = SQLClient()
+    with client.get_session() as session:
+        # Group by article name and sum the quantity
+        results = session.query(Article.nom_article, Article.quantite).all()
+        article_counts = {}
+        for name, quantity in results:
+            article_counts[name] = article_counts.get(name, 0) + quantity
+
+        # Sort articles by total quantity purchased
+        sorted_articles = sorted(article_counts.items(), key=lambda item: item[1], reverse=True)
+        return [{"article": article, "total_quantity": quantity} for article, quantity in sorted_articles[:limit]]
+
+def get_null_total_facture_count():
+    client = SQLClient()
+    with client.get_session() as session:
+        return session.query(Facture).filter(Facture.total_facture.is_(None)).count()
+
+@app.get("/stats", response_class=HTMLResponse)
+async def stats_dashboard(request: Request, user: User = Depends(get_current_user)):
+    average_basket = calculate_average_basket()
+    total_revenue = calculate_total_revenue()
+    invoice_count = get_invoice_count()
+    unique_user_count = get_unique_user_count()
+    most_prolific_clients = get_most_prolific_clients()
+    most_regular_clients = get_most_regular_clients()
+    most_demanding_cities = get_most_demanding_cities()
+    most_purchased_articles = get_most_purchased_articles()
+    null_total_facture_count = get_null_total_facture_count() # Appel de la nouvelle fonction
+
+    return templates.TemplateResponse(
+        "stats.html",
+        {
+            "request": request,
+            "nom_app": "PROCR",
+            "average_basket": average_basket,
+            "total_revenue": total_revenue,
+            "invoice_count": invoice_count,
+            "unique_user_count": unique_user_count,
+            "most_prolific_clients": most_prolific_clients,
+            "most_regular_clients": most_regular_clients,
+            "most_demanding_cities": most_demanding_cities,
+            "most_purchased_articles": most_purchased_articles,
+            "null_total_facture_count": null_total_facture_count, # Passage de la nouvelle variable au template
+        },
+    )

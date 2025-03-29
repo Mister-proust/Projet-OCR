@@ -1,6 +1,8 @@
-from sqlalchemy import Column, MetaData, ForeignKey, PrimaryKeyConstraint
+from sqlalchemy import Column, MetaData, ForeignKey, PrimaryKeyConstraint, Integer, String, DateTime, Float
 from sqlalchemy.dialects.postgresql import VARCHAR, INTEGER, FLOAT
 from sqlalchemy.orm import declarative_base, relationship
+from datetime import datetime
+from sqlalchemy.ext.declarative import declarative_base
 
 
 #######################################################################
@@ -56,3 +58,14 @@ class Article(Base):
      #facture = relationship("Facture", back_populates="Article")
 
      __table_args__ = (PrimaryKeyConstraint("nom_facture", "nom_article"),)
+
+
+class Monitoring(Base):
+    __tablename__ = "monitoring"
+
+    id = Column(Integer, primary_key=True, index=True)
+    timestamp = Column(DateTime, default=datetime.utcnow)
+    metric_name = Column(String(255))
+    value = Column(Float, nullable=True)
+    status = Column(String(50), nullable=True)
+    details = Column(String, nullable=True)
